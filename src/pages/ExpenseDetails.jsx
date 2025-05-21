@@ -21,7 +21,7 @@ const ExpenseDetails = ({ data }) => {
     const items = [];
 
     if (remarks) {
-      const remarkItems = remarks.split(',').map((item) => item.trim());
+      const remarkItems = remarks.split(',').map((item) => item.trim()).filter((item) => item);
       remarkItems.forEach((item) => {
         const match = item.match(/^(\d+\.?\d*|-)\/?-?\s*(.*)$/);
         if (match) {
@@ -30,6 +30,9 @@ const ExpenseDetails = ({ data }) => {
           if (!isNaN(amount)) {
             items.push({ description, amount });
           }
+        } else {
+          // If remark doesn't match the expected format, treat it as a description
+          items.push({ description: item, amount: 0 });
         }
       });
     }

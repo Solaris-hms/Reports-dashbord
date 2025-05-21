@@ -36,7 +36,7 @@ const RevenueDetails = ({ data }) => {
         <RevenueDetailsCard
           icon={FaPiggyBank}
           value={formatCurrency(data ? data['Total Amount Credited in Bank Today'] : 0)}
-          label="Bank Amount Credited Today"
+          label="Bank Amount Credited"
           color="text-purple-500"
           bgColor="bg-purple-100"
         />

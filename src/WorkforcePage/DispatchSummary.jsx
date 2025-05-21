@@ -3,7 +3,6 @@ import RevenueDetailsCard from '../pages/RevenueDetailsCard';
 import { FaTruckLoading, FaFireAlt, FaTrashRestore, FaBoxes } from 'react-icons/fa';
 
 const DispSumm = ({ data }) => {
-  // Calculate the sum of 14 material types dispatched
   const materialFields = [
     'Bhangar Dispatched Today (in tons)',
     'Black Plastic Dispatched Today (in tons)',
@@ -23,6 +22,9 @@ const DispSumm = ({ data }) => {
     'Milk Pouch Dispatched Today (in tons)',
   ];
 
+  const format = (val) =>
+    typeof val === 'number' ? `${val.toFixed(2)} T` : '0.00 T';
+
   const totalMaterialDispatched = data
     ? materialFields.reduce((sum, field) => sum + (data[field] || 0), 0)
     : 0;
@@ -34,37 +36,30 @@ const DispSumm = ({ data }) => {
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        {/* RDF Dispatch */}
         <RevenueDetailsCard
           icon={FaTruckLoading}
-          value={data ? `${data['RDF Dispatched Today  (in tons)']} T` : 'N/A'}
+          value={format(data?.['RDF Dispatched Today  (in tons)'])}
           label="RDF Dispatch"
           color="text-green-600"
           bgColor="bg-green-100"
         />
-
-        {/* AFR Dispatch */}
         <RevenueDetailsCard
           icon={FaFireAlt}
-          value={data ? `${data['AFR Dispatched Today (in tons)']} T` : 'N/A'}
+          value={format(data?.['AFR Dispatched Today (in tons)'])}
           label="AFR Dispatch"
           color="text-red-600"
           bgColor="bg-red-100"
         />
-
-        {/* Inert Dispatch */}
         <RevenueDetailsCard
           icon={FaTrashRestore}
-          value={data ? `${data['Inert (in tons)']} T` : 'N/A'}
+          value={format(data?.['Inert (in tons)'])}
           label="Inert Dispatch"
           color="text-blue-600"
           bgColor="bg-blue-100"
         />
-
-        {/* Total Material Types */}
         <RevenueDetailsCard
           icon={FaBoxes}
-          value={data ? `${totalMaterialDispatched} T` : 'N/A'}
+          value={`${totalMaterialDispatched.toFixed(2)} T`}
           label="Sum of 14 Material Dispatched"
           color="text-purple-600"
           bgColor="bg-purple-100"

@@ -11,6 +11,7 @@ import {
 
 const MaterialRevenue = ({ data }) => {
   const [isDesktop, setIsDesktop] = useState(true);
+  const [chartKey, setChartKey] = useState(Date.now());
 
   const materialFields = [
     { name: 'Bhangar', key: 'Bhangar' },
@@ -57,14 +58,23 @@ const MaterialRevenue = ({ data }) => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  useEffect(() => {
+    // Regenerate chartKey to trigger animation when `data` changes
+    setChartKey(Date.now());
+  }, [data]);
+
   return (
     <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-lg w-full h-full">
       <h2 className="text-xl font-bold text-gray-800 mb-5">Material Revenue Breakdown</h2>
-      
+
       {isDesktop ? (
         <div className="w-full h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 30, right: 30, bottom: 80, left: 0 }}>
+            <BarChart
+              key={chartKey}
+              data={chartData}
+              margin={{ top: 30, right: 30, bottom: 80, left: 0 }}
+            >
               <XAxis
                 dataKey="name"
                 tick={{ fontSize: 10 }}

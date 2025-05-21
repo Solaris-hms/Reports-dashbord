@@ -1,0 +1,21 @@
+/* CustomDatePicker.css */
+.custom-calendar {
+  border-radius: 12px !important;
+  padding: 10px !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e2e8f0 !important;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: #6366f1 !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: #e0e7ff !important;
+  color: #1e3a8a !important;
+}

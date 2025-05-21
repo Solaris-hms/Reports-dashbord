@@ -3,6 +3,9 @@ import MetricCard from './MetricCard';
 import { FaUserCog, FaClock, FaPercentage, FaCheckCircle } from 'react-icons/fa';
 
 const OperationalMetrics = ({ data }) => {
+  const format = (val, suffix = '') =>
+    typeof val === 'number' ? `${val.toFixed(2)}${suffix}` : 'N/A';
+
   return (
     <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-6 shadow-md w-full h-full">
       <h2 className="text-base font-semibold text-gray-700 mb-4">Operational Metrics</h2>
@@ -16,19 +19,19 @@ const OperationalMetrics = ({ data }) => {
         <MetricCard
           icon={FaClock}
           label="Machine Downtime"
-          value={data ? `${data['Machine Down Time Today (In Hours)']} hrs` : 'N/A'}
+          value={format(data?.['Machine Down Time Today (In Hours)'], ' hrs')}
           iconColor="text-red-500"
         />
         <MetricCard
           icon={FaPercentage}
           label="Sorting Accuracy"
-          value={data ? `${data['Sorting Accuracy Today (In Percent )']}%` : 'N/A'}
+          value={format(data?.['Sorting Accuracy Today (In Percent )'], '%')}
           iconColor="text-yellow-500"
         />
         <MetricCard
           icon={FaCheckCircle}
           label="Machine Uptime"
-          value={data ? `${data['Machine Up Time Today (In Hours)']} hrs` : 'N/A'}
+          value={format(data?.['Machine Up Time Today (In Hours)'], ' hrs')}
           iconColor="text-green-600"
         />
       </div>

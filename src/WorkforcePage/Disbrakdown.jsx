@@ -33,7 +33,7 @@ const DispatchBreakdown = ({ data }) => {
 
   const chartData = materialFields.map((field) => ({
     name: field.name,
-    value: data ? data[field.key] || 0 : 0,
+    value: data ? parseFloat(data[field.key]) || 0 : 0,
   }));
 
   const maxValue = Math.max(...chartData.map((item) => item.value), 1);
@@ -43,7 +43,7 @@ const DispatchBreakdown = ({ data }) => {
     if (active && payload?.length) {
       return (
         <div className="bg-white shadow-md rounded-md px-3 py-2 border border-gray-200 text-sm pointer-events-none">
-          <strong>{label}</strong>: {payload[0].value} tons
+          <strong>{label}</strong>: {payload[0].value.toFixed(2)} tons
         </div>
       );
     }
@@ -92,7 +92,7 @@ const DispatchBreakdown = ({ data }) => {
                 <LabelList
                   dataKey="value"
                   position="top"
-                  formatter={(val) => `${val}T`}
+                  formatter={(val) => `${val.toFixed(2)}T`}
                   style={{ fontSize: 12, fill: '#333' }}
                 />
               </Bar>
