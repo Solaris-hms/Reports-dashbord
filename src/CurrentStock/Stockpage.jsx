@@ -2,42 +2,66 @@ import React from 'react';
 import Totalstock from './Stockchart';
 
 const Stock = ({ stockData, selectedDate }) => {
-  const formatStockData = (data) => {
-    if (!data || !Array.isArray(data)) {
-      return [];
-    }
+  // Convert today's date to DD/MM/YYYY to match your API datestring format
+  const today = new Date();
+  const todayDateString = [
+    String(today.getDate()).padStart(2, '0'),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    today.getFullYear(),
+  ].join('/');
 
-    const selectedData = data.find((item) => item.datestring === selectedDate);
+  // Find index of selected date in the data array
+  const selectedIndex = stockData.findIndex(item => item.datestring === selectedDate);
 
-    if (!selectedData) {
-      return [];
-    }
+  // Get previous date data for opening stock (or null if none)
+  const openingData = selectedIndex > 0 ? stockData[selectedIndex - 1] : null;
+  // Get selected date data for closing stock (or null if not found)
+  const closingData = selectedIndex !== -1 ? stockData[selectedIndex] : null;
 
-    const formattedData = [
-      { name: 'Bhangar', stock: selectedData['Bhangar (in tons)'] },
-      { name: 'Black Plastic', stock: selectedData['Black Plastic (in tons)'] },
-      { name: 'Carton', stock: selectedData['Carton (in tons)'] },
-      { name: 'Duplex', stock: selectedData['Duplex (in tons)'] },
-      { name: 'Glass', stock: selectedData['Glass (in tons)'] },
-      { name: 'Grey Board', stock: selectedData['Grey Board (in tons)'] },
-      { name: 'HD Cloth', stock: selectedData['HD Cloth (in tons)'] },
-      { name: 'LD', stock: selectedData['LD  (in tons)'] },
-      { name: 'HM', stock: selectedData['HM (in tons)'] },
-      { name: 'Record', stock: selectedData['Record (in tons)'] },
-      { name: 'Sole', stock: selectedData['Sole (in tons)'] },
-      { name: 'Plastic', stock: selectedData['Plastic (in tons)'] },
-      { name: 'Aluminium Can', stock: selectedData['Aluminium can (in tons)'] },
-      { name: 'Pet Bottle', stock: selectedData['Pet Bottle  (in tons)'] },
-      { name: 'Milk Pouch', stock: selectedData['Milk Pouch  (in tons)'] },
-    ].filter((item) => item.stock >= 0); // Remove negative values
+  // Show custom message if no closing data available
+  if (!closingData) {
+    return (
+      <div className="p-4 sm:p-6 min-h-screen bg-gradient-to-br from-[#9b27b0] via-[#2196f3] to-[#f2c99f] flex items-center justify-center">
+        <p className="text-white text-center text-sm sm:text-base max-w-xs">
+          {selectedDate === todayDateString
+            ? "Today's reports will be triggered at 9 PM."
+            : `No stock data available for ${selectedDate}`}
+        </p>
+      </div>
+    );
+  }
 
-    return formattedData;
+  // Prepare combined data with opening and closing values for each material
+  const formatCombinedData = (opening, closing) => {
+    const materials = [
+      'Bhangar (in tons)',
+      'Black Plastic (in tons)',
+      'Carton (in tons)',
+      'Duplex (in tons)',
+      'Glass (in tons)',
+      'Grey Board (in tons)',
+      'HD Cloth (in tons)',
+      'LD  (in tons)',
+      'HM (in tons)',
+      'Record (in tons)',
+      'Sole (in tons)',
+      'Plastic (in tons)',
+      'Aluminium can (in tons)',
+      'Pet Bottle  (in tons)',
+      'Milk Pouch  (in tons)',
+    ];
+
+    return materials.map(name => ({
+      name: name.replace(' (in tons)', ''),
+      opening: opening ? opening[name] : 0,
+      closing: closing[name],
+    }));
   };
 
-  const chartData = formatStockData(stockData);
+  const chartData = formatCombinedData(openingData, closingData);
 
   return (
-    <div className="p-4 sm:p-6 min-h-screen bg-gradient-to-br from-[#9b27b0] via-[#2196f3] to-[#f2c99c]">
+    <div className="p-4 sm:p-6 min-h-screen bg-gradient-to-br from-[#9b27b0] via-[#2196f3] to-[#f2c99f]">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
           Daily Stock Summary
@@ -46,12 +70,6 @@ const Stock = ({ stockData, selectedDate }) => {
           Report Date: {selectedDate}
         </span>
       </div>
-
-      {chartData.length === 0 && (
-        <p className="text-white text-center text-sm sm:text-base">
-          No stock data available for {selectedDate}
-        </p>
-      )}
 
       <div className="mb-6">
         <Totalstock data={chartData} selectedDate={selectedDate} />
