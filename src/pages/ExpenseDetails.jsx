@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import RevenueDetailsCard from './RevenueDetailsCard';
-import { FaGasPump, FaBolt, FaTools, FaReceipt, FaTimes } from 'react-icons/fa';
+import { FaGasPump, FaTruck, FaTools, FaReceipt, FaTimes } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ExpenseDetails = ({ data }) => {
@@ -20,9 +20,10 @@ const ExpenseDetails = ({ data }) => {
 
   const parseBifurcation = () => {
     const remarks = data ? data['Bifurcation of expenses (Remarks)'] || '' : '';
-    const transportation = data ? data['Transportation Expenses'] || 0 : 0;
     const items = [];
 
+    // This function will now only parse the remarks string.
+    // Transportation has its own dedicated card.
     if (remarks) {
       const remarkItems = remarks
         .split(',')
@@ -37,13 +38,12 @@ const ExpenseDetails = ({ data }) => {
             items.push({ description, amount });
           }
         } else {
-          items.push({ description: item, amount: 0 });
+          // If no number is found, treat it as a descriptive remark without a value
+          if (item) { // ensure we don't push empty strings
+             items.push({ description: item, amount: 0 });
+          }
         }
       });
-    }
-
-    if (transportation > 0) {
-      items.push({ description: 'Transportation Expenses', amount: transportation });
     }
 
     return items;
@@ -64,12 +64,13 @@ const ExpenseDetails = ({ data }) => {
             color="text-red-500"
             bgColor="bg-red-100"
           />
+          {/* --- UPDATED: This card now shows Transportation Expenses --- */}
           <RevenueDetailsCard
-            icon={FaBolt}
-            value={formatCurrency(data ? data['Electricity Cost'] : 0)}
-            label="Electricity Cost"
-            color="text-yellow-500"
-            bgColor="bg-yellow-100"
+            icon={FaTruck}
+            value={formatCurrency(data ? data['Transportation Expenses'] : 0)}
+            label="Transportation"
+            color="text-green-500"
+            bgColor="bg-green-100"
           />
           <RevenueDetailsCard
             icon={FaTools}
@@ -103,7 +104,7 @@ const ExpenseDetails = ({ data }) => {
           <>
             {/* Blurred background overlay */}
             <motion.div
-              className="fixed inset-0 z-40 backdrop-blur-sm bg-white/30"
+              className="fixed inset-0 z-40 backdrop-blur-sm bg-black/30"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

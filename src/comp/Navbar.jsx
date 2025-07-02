@@ -5,7 +5,8 @@ import { Link, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-const Navbar = ({ setSelectedDate }) => {
+// *** FIXED: Correctly receive all props from App.js ***
+const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownValue, setDropdownValue] = useState('');
   const [prevDropdownValue, setPrevDropdownValue] = useState('');
@@ -15,29 +16,75 @@ const Navbar = ({ setSelectedDate }) => {
   const [focusedDate, setFocusedDate] = useState(null);
   const location = useLocation();
 
-  const isCurrentStock = location.pathname === '/current-stock';
+  const isCurrentStockPage = location.pathname === '/current-stock';
 
   const formatDate = (date) => {
+    if (!date) return '';
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
+  
+  // *** REWRITTEN LOGIC FOR DATE HANDLING ***
 
+  // Effect 1: Handles the special requirement for the 'Current Stock' page.
+  // This page should always show the latest available stock data, not a date range.
   useEffect(() => {
-    if (isCurrentStock) {
-      const today = new Date();
-      setFocusedDate(today);
-      setSelectedDate(formatDate(today));
-      setDropdownValue('');
+    if (isCurrentStockPage) {
+      if (latestStockDate) {
+        // If the latest stock date is available and it's not already selected, update it.
+        if (selectedDate !== latestStockDate) {
+          setSelectedDate(latestStockDate);
+        }
+      } else if (selectedDate && selectedDate.includes(' to ')) {
+        // Fallback: if latestStockDate hasn't loaded but a range is selected,
+        // just set it to yesterday to ensure it's a single day.
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        setSelectedDate(formatDate(yesterday));
+      }
     }
-  }, [isCurrentStock]);
+    // This effect runs only when you navigate to/from the stock page, or when new data arrives.
+  }, [isCurrentStockPage, latestStockDate, selectedDate, setSelectedDate]);
+
+
+  // Effect 2: Syncs the DatePicker's visual state with the `selectedDate` from App.js.
+  // This ensures the date picker always shows the correct date from the app's state.
+  useEffect(() => {
+    if (!selectedDate) {
+      // If date is null (e.g., still loading), clear the picker.
+      setFocusedDate(null);
+      setDropdownValue('');
+      return;
+    }
+
+    if (selectedDate.includes(' to ')) {
+      // Date is a range, no single date is focused in the picker
+      setFocusedDate(null);
+    } else {
+      // Date is a single day. Parse it and set it in the date picker.
+      const [day, month, year] = selectedDate.split('/').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      if (!isNaN(dateObj.getTime())) {
+          setFocusedDate(dateObj);
+      }
+      
+      // Update dropdown for 'Today'
+      if (selectedDate === formatDate(new Date())) {
+          setDropdownValue('Today');
+      } else {
+          setDropdownValue('');
+      }
+    }
+  }, [selectedDate]); // This effect runs whenever the main app date changes.
+
 
   const handleDateChange = (date) => {
     if (!date || isNaN(date)) return;
     setFocusedDate(date);
     setSelectedDate(formatDate(date));
-    setDropdownValue(''); // Reset dropdown to "Range"
+    setDropdownValue('');
   };
 
   const handleRangeChange = (e) => {
@@ -87,17 +134,22 @@ const Navbar = ({ setSelectedDate }) => {
     setSelectedDate(`${formatDate(startDate)} to ${formatDate(today)}`);
     setShowCustomPicker(false);
   };
-
+  
+  // No changes needed for the JSX below, it will now work correctly
+  // with the fixed state management logic above.
   const navLink = (path, label) => (
+    // ...
     <Link
       to={path}
       className={`hover:underline ${location.pathname === path ? 'font-bold underline' : ''}`}
+      onClick={() => setMenuOpen(false)}
     >
       {label}
     </Link>
   );
 
   const Dropdown = () => (
+    // ...
     <select
       value={dropdownValue}
       onChange={handleRangeChange}
@@ -115,36 +167,25 @@ const Navbar = ({ setSelectedDate }) => {
   );
 
   const renderDatePicker = () => {
-    const isToday = dropdownValue === 'Today';
-    const selected =
-      isToday || !focusedDate
-        ? isToday
-          ? new Date()
-          : null
-        : focusedDate instanceof Date && !isNaN(focusedDate)
-        ? focusedDate
-        : null;
-
-    const placeholderText = isToday ? formatDate(new Date()) : 'Pick a particular date';
-
+    // This function will now correctly display the `focusedDate` which is synced from the App's state.
     return (
       <DatePicker
-        selected={selected}
+        selected={focusedDate}
         onChange={handleDateChange}
-        placeholderText={placeholderText}
+        placeholderText="Select Date"
         dateFormat="dd/MM/yyyy"
         className="bg-transparent text-white text-sm outline-none cursor-pointer w-[150px]"
         popperPlacement="bottom-end"
         calendarClassName="bg-white rounded-xl p-2 shadow-xl border border-gray-200"
-        dayClassName={() =>
-          'text-gray-700 hover:bg-blue-100 transition duration-150 rounded-full'
-        }
+        dayClassName={() => 'text-gray-700 hover:bg-blue-100 transition duration-150 rounded-full'}
         minDate={new Date('2025-01-01')}
         maxDate={new Date('2075-05-02')}
       />
     );
   };
-
+  
+  // (The rest of the component's JSX remains the same)
+  // ...
   return (
     <header className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 shadow-md fixed w-full z-10 top-0 left-0">
       <div className="flex justify-between items-start md:items-center">
@@ -159,6 +200,7 @@ const Navbar = ({ setSelectedDate }) => {
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
             {navLink('/current-stock', 'Current Stock')}
+            {navLink('/financials', 'Financials')}
           </nav>
 
           <div className="hidden md:flex items-center space-x-2">
@@ -166,7 +208,7 @@ const Navbar = ({ setSelectedDate }) => {
               <CalendarDays size={18} className="text-white" />
               {renderDatePicker()}
             </div>
-            {!isCurrentStock && <Dropdown />}
+            {!isCurrentStockPage && <Dropdown />}
           </div>
 
           <button
@@ -186,14 +228,14 @@ const Navbar = ({ setSelectedDate }) => {
             <CalendarDays size={18} className="text-white" />
             {renderDatePicker()}
           </div>
-
-          {!isCurrentStock && <Dropdown />}
+          {!isCurrentStockPage && <Dropdown />}
 
           <div className="flex flex-col space-y-2">
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
             {navLink('/current-stock', 'Current Stock')}
+            {navLink('/financials', 'Financials')}
           </div>
         </div>
       )}
@@ -255,11 +297,7 @@ const Navbar = ({ setSelectedDate }) => {
                   }
                 }}
                 disabled={!customStartDate || !customEndDate}
-                className={`px-4 py-2 rounded text-sm ${
-                  customStartDate && customEndDate
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-blue-200 text-white cursor-not-allowed'
-                }`}
+                className={`px-4 py-2 rounded text-sm ${customStartDate && customEndDate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-200 text-white cursor-not-allowed'}`}
               >
                 Apply
               </button>
@@ -267,23 +305,8 @@ const Navbar = ({ setSelectedDate }) => {
           </div>
         </div>
       )}
-
       <style>
-        {`
-          @keyframes fadeInScale {
-            0% {
-              opacity: 0;
-              transform: scale(0.95);
-            }
-            100% {
-              opacity: 1;
-              transform: scale(1);
-            }
-          }
-          .animate-fadeInScale {
-            animation: fadeInScale 0.3s ease-out;
-          }
-        `}
+        {`@keyframes fadeInScale {0% {opacity: 0;transform: scale(0.95);} 100% {opacity: 1;transform: scale(1);}}.animate-fadeInScale {animation: fadeInScale 0.3s ease-out;}`}
       </style>
     </header>
   );
