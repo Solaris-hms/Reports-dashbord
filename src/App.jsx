@@ -6,24 +6,25 @@ import Dash from './comp/Dash';
 import Revenue from './pages/Revenue';
 import Stock from './CurrentStock/Stockpage';
 import FinancialStatement from './pages/FinancialStatement';
-import { stockapidata, workapidata, plantdata, revdata } from './FetchData';
+import BeltDashboard from './BeltDashboard'; // Import new component
+
+// *** STEP 1: Import the new beltapidata function ***
+import { stockapidata, workapidata, plantdata, revdata, beltapidata } from './FetchData';
+
 import { Mirage } from 'ldrs/react';
 import 'ldrs/react/Mirage.css';
 
 // --- DATE HELPER FUNCTIONS ---
-
-// Formats a Date object to a 'DD/MM/YYYY' string (App's standard format)
 const formatDateToDDMMYYYY = (date) => {
-  if (!date || isNaN(date.getTime())) return null; // Guard against invalid dates
+  if (!date || isNaN(date.getTime())) return null;
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 };
 
-// Formats a Date object to an 'MMDDYYYY' string for matching the 'id' field
 const formatDateToMMDDYYYY = (date) => {
-  if (!date || isNaN(date.getTime())) return null; // Guard against invalid dates
+  if (!date || isNaN(date.getTime())) return null;
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
@@ -35,8 +36,11 @@ function App() {
   const [workforceData, setWorkforceData] = useState(null);
   const [plantData, setPlantData] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null); // Start as null, will be set after fetch
-  const [latestStockDate, setLatestStockDate] = useState(null); // *** NEW STATE: Stores the latest date from stock data
+  // *** STEP 2: Add state for the new belt data ***
+  const [beltData, setBeltData] = useState(null);
+  
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [latestStockDate, setLatestStockDate] = useState(null);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,36 +50,38 @@ function App() {
       setLoading(true);
       setError(null);
       try {
-        const [stockResponse, workforceResponse, plantResponse, revenueResponse] = await Promise.all([
+        // *** STEP 3: Add beltapidata() to the Promise.all call ***
+        const [stockResponse, workforceResponse, plantResponse, revenueResponse, beltResponse] = await Promise.all([
           stockapidata(),
           workapidata(),
           plantdata(),
           revdata(),
+          beltapidata(), // Fetch belt data concurrently
         ]);
 
-        if (!stockResponse || !workforceResponse || !plantResponse || !revenueResponse) {
+        if (!stockResponse || !workforceResponse || !plantResponse || !revenueResponse || !beltResponse) {
           throw new Error('One or more API requests failed.');
         }
-
-        // --- Set state for all data first ---
+        
+        // *** STEP 4: Set the state for the new belt data ***
         setStockData(stockResponse);
         setWorkforceData(workforceResponse);
         setPlantData(plantResponse);
         setRevenueData(revenueResponse);
-
-        // *** NEW LOGIC: Find the most recent date in the stock data ***
+        setBeltData(beltResponse); // Set the belt data state
+        
+        // (The rest of the date logic remains the same)
         if (stockResponse && stockResponse.length > 0) {
           const dates = stockResponse
             .map(item => {
               if (!item.datestring) return null;
-              const parts = item.datestring.split('/'); // Assumes DD/MM/YYYY
+              const parts = item.datestring.split('/');
               if (parts.length === 3) {
-                // Return new Date(year, monthIndex, day)
                 return new Date(parts[2], parts[1] - 1, parts[0]);
               }
               return null;
             })
-            .filter(date => date && !isNaN(date.getTime())); // Filter out any invalid dates
+            .filter(date => date && !isNaN(date.getTime()));
 
           if (dates.length > 0) {
             const maxDate = new Date(Math.max.apply(null, dates));
@@ -83,7 +89,6 @@ function App() {
           }
         }
         
-        // --- CORRECTED INITIAL DATE LOGIC ---
         const today = new Date();
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -96,7 +101,6 @@ function App() {
         const hasTodayDataInRevenue = revenueResponse.some(item => item.id === todayMMDDYYYY);
         const hasTodayDataInWorkforce = workforceResponse.some(item => item.id === todayMMDDYYYY);
         
-        // This logic correctly sets the initial date for the entire app
         let initialDateToSet;
         if (hasTodayDataInStock || hasTodayDataInPlant || hasTodayDataInRevenue || hasTodayDataInWorkforce) {
           initialDateToSet = todayDDMMYYYY;
@@ -108,7 +112,7 @@ function App() {
 
       } catch (err) {
         setError('Failed to load data. Please try again later.');
-        setSelectedDate(formatDateToDDMMYYYY(new Date())); // Fallback to today on error
+        setSelectedDate(formatDateToDDMMYYYY(new Date()));
       } finally {
         setLoading(false);
       }
@@ -140,7 +144,6 @@ function App() {
     );
   }
 
-  // Pass selectedDate to the loading Navbar as well
   if (loading || !selectedDate) {
     return (
       <Router>
@@ -155,11 +158,14 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-100 pt-16">
-        {/* *** UPDATED: Pass both dates to Navbar *** */}
         <Navbar setSelectedDate={setSelectedDate} selectedDate={selectedDate} latestStockDate={latestStockDate} />
         <Routes>
           <Route path="/" element={<Navigate to="/waste-processing" replace />} />
           <Route path="/waste-processing" element={plantData ? <Dash plantData={plantData} selectedDate={selectedDate} dateRange={dateRange} /> : <div>No plant data available</div>} />
+          
+          {/* *** STEP 5: Pass the new beltData prop to your component *** */}
+          <Route path="/segregation-belts" element={beltData ? <BeltDashboard beltData={beltData} selectedDate={selectedDate} /> : <div>Loading belt data...</div>} />
+          
           <Route path="/revenue" element={revenueData ? <Revenue revenueData={revenueData} selectedDate={selectedDate} dateRange={dateRange} /> : <div>No revenue data available</div>} />
           <Route path="/workforce" element={workforceData ? <Workforce workforceData={workforceData} selectedDate={selectedDate} dateRange={dateRange} /> : <div>No workforce data available</div>} />
           <Route path="/current-stock" element={stockData ? <Stock stockData={stockData} selectedDate={selectedDate} /> : <div>No stock data available</div>} />

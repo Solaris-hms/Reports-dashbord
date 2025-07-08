@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 
-// === CONFIGURATION: Define salaries and FIXED employee counts here ===
+// === CONFIGURATION: Define salaries, rates, and FIXED employee counts here ===
 // Worker data comes from the API. Other roles have a fixed daily count.
+const ELECTRICITY_RATE_PER_UNIT = 7.68; // New rate definition
+
 const SALARY_CONFIG = {
     // Dynamic Role
     WORKER: { salaryPerDay: 400, label: "Rag Picker" },
@@ -60,20 +62,35 @@ const FinancialStatement = ({ revenueData, workforceData, selectedDate, dateRang
         const filteredRevenue = revenueData.filter(item => { const itemDate = normalizeDate(new Date(item.Timestamp)); return itemDate >= startDate && itemDate <= endDate; });
         const filteredWorkforce = workforceData.filter(item => { const itemDate = normalizeDate(new Date(item.Timestamp)); return itemDate >= startDate && itemDate <= endDate; });
 
+        // MODIFICATION START: Calculate costs from different data sources
+        
+        // 1. Get revenues and some expenses from the REVENUE data source
         const totals = filteredRevenue.reduce((acc, item) => {
             acc.rdfRevenue += Number(item['RDF Revenue ( in ₹ )']) || 0;
             acc.afrRevenue += Number(item['AFR Revenue (in ₹)']) || 0;
             acc.recyclablesRevenue += Number(item['Total Recyclables Revenue ( in ₹ )']) || 0;
             acc.transportationExpenses += Number(item['Transportation Expenses']) || 0;
-            acc.dieselCost += Number(item['Diesel Cost']) || 0;
-            acc.electricityCost += Number(item['Electricity Cost']) || 0;
             acc.maintenanceCost += Number(item['Maintenance Cost']) || 0;
             acc.otherExpenses += Number(item['Any other']) || 0;
             if (item['Bifurcation of expenses (Remarks)']) acc.otherExpenseBreakdown.push({ date: formatDate(new Date(item.Timestamp)), remark: item['Bifurcation of expenses (Remarks)'] });
             const bankCredit = Number(item['Total Amount Credited in Bank Today']) || 0;
             if (bankCredit > 0) acc.bankCredits.push({ date: formatDate(new Date(item.Timestamp)), amount: bankCredit });
             return acc;
-        }, { rdfRevenue: 0, afrRevenue: 0, recyclablesRevenue: 0, transportationExpenses: 0, dieselCost: 0, electricityCost: 0, maintenanceCost: 0, otherExpenses: 0, otherExpenseBreakdown: [], bankCredits: [] });
+        }, { rdfRevenue: 0, afrRevenue: 0, recyclablesRevenue: 0, transportationExpenses: 0, maintenanceCost: 0, otherExpenses: 0, otherExpenseBreakdown: [], bankCredits: [] });
+
+        // 2. Get operational costs (like electricity) from the WORKFORCE/PLANT data source
+        const operationalTotals = filteredWorkforce.reduce((acc, item) => {
+            acc.totalDieselLiters += Number(item['Diesel Consumption (in liters)']) || 0; // If you need to calculate diesel cost, you'd do it here
+            acc.totalElectricityUnits += Number(item['Electricity Consumption (in Units)']) || 0;
+            return acc;
+        }, { totalDieselLiters: 0, totalElectricityUnits: 0 });
+
+        // 3. Perform calculations with the gathered data
+        const calculatedElectricityCost = operationalTotals.totalElectricityUnits * ELECTRICITY_RATE_PER_UNIT;
+        // NOTE: For now, Diesel Cost is still assumed from revenueData. If it's in workforceData, update it similarly.
+        const dieselCostFromRevenue = filteredRevenue.reduce((sum, item) => sum + (Number(item['Diesel Cost']) || 0), 0);
+
+        // MODIFICATION END
 
         let totalEmployeeSalary = 0;
         const employeeBreakdown = [];
@@ -91,11 +108,18 @@ const FinancialStatement = ({ revenueData, workforceData, selectedDate, dateRang
         });
 
         const totalIncome = totals.rdfRevenue + totals.afrRevenue + totals.recyclablesRevenue;
-        const totalOperatingExpenses = totals.transportationExpenses + totals.dieselCost + totals.electricityCost + totals.maintenanceCost;
+        const totalOperatingExpenses = totals.transportationExpenses + dieselCostFromRevenue + calculatedElectricityCost + totals.maintenanceCost;
         const totalExpenses = totalOperatingExpenses + totalEmployeeSalary + totals.otherExpenses;
         const netResult = totalIncome - totalExpenses;
+        
+        const operatingExpensesData = {
+            "Transportation Expenses": totals.transportationExpenses,
+            "Diesel Cost": dieselCostFromRevenue, // Using this for consistency for now
+            "Electricity Cost": calculatedElectricityCost, // <-- Using the newly calculated cost
+            "Maintenance Cost": totals.maintenanceCost
+        };
 
-        return { reportDateString: selectedDate, totalIncome, totalExpenses, netResult, incomes: { "RDF Revenue": totals.rdfRevenue, "AFR Revenue": totals.afrRevenue, "Recyclables Revenue": totals.recyclablesRevenue }, operatingExpenses: { "Transportation Expenses": totals.transportationExpenses, "Diesel Cost": totals.dieselCost, "Electricity Cost": totals.electricityCost, "Maintenance Cost": totals.maintenanceCost }, otherExpenseBreakdown: totals.otherExpenseBreakdown, otherExpensesTotal: totals.otherExpenses, totalEmployeeSalary, employeeBreakdown, bankCredits: totals.bankCredits };
+        return { reportDateString: selectedDate, totalIncome, totalExpenses, netResult, incomes: { "RDF Revenue": totals.rdfRevenue, "AFR Revenue": totals.afrRevenue, "Recyclables Revenue": totals.recyclablesRevenue }, operatingExpenses: operatingExpensesData, otherExpenseBreakdown: totals.otherExpenseBreakdown, otherExpensesTotal: totals.otherExpenses, totalEmployeeSalary, employeeBreakdown, bankCredits: totals.bankCredits };
     }, [revenueData, workforceData, dateRange, selectedDate]);
 
     // --- STATIC CALCULATION from DUMMY data for the bank modal ---

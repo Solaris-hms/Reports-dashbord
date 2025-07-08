@@ -82,3 +82,31 @@ export const revdata = async () => {
     return null;
   }
 };
+
+// ===============================================
+// === STEP 1: ADD THIS NEW FUNCTION ===
+// ===============================================
+
+const API_KEY_BELT = 'https://script.google.com/macros/s/AKfycbyO-x3pEihYFlEsAWPJQLj1GJ1ptyvxUYQWrnuw_ZWYM_5kNQyZro2D5RGq9BYfDnDp/exec';
+export const beltapidata = async () => {
+  try {
+    // Fetch data for all three belts concurrently and wait for all to complete
+    const promises = ['1', '2', '3'].map(beltId => 
+      fetch(`${API_KEY_BELT}?belt=${beltId}`).then(res => res.json())
+    );
+    const results = await Promise.all(promises);
+
+    // Combine the 'data' array from all successful API calls
+    const combinedData = results.reduce((acc, result) => {
+        if (result.status === 'success' && Array.isArray(result.data)) {
+            return [...acc, ...result.data];
+        }
+        return acc;
+    }, []);
+
+    return combinedData;
+  } catch (error) {
+    console.error('Failed to fetch belt data:', error);
+    return null; // Return null on failure so Promise.all doesn't break
+  }
+};

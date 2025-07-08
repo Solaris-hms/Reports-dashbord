@@ -5,7 +5,6 @@ import { Link, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-// *** FIXED: Correctly receive all props from App.js ***
 const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownValue, setDropdownValue] = useState('');
@@ -26,58 +25,43 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
     return `${day}/${month}/${year}`;
   };
   
-  // *** REWRITTEN LOGIC FOR DATE HANDLING ***
-
-  // Effect 1: Handles the special requirement for the 'Current Stock' page.
-  // This page should always show the latest available stock data, not a date range.
   useEffect(() => {
     if (isCurrentStockPage) {
       if (latestStockDate) {
-        // If the latest stock date is available and it's not already selected, update it.
         if (selectedDate !== latestStockDate) {
           setSelectedDate(latestStockDate);
         }
       } else if (selectedDate && selectedDate.includes(' to ')) {
-        // Fallback: if latestStockDate hasn't loaded but a range is selected,
-        // just set it to yesterday to ensure it's a single day.
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         setSelectedDate(formatDate(yesterday));
       }
     }
-    // This effect runs only when you navigate to/from the stock page, or when new data arrives.
   }, [isCurrentStockPage, latestStockDate, selectedDate, setSelectedDate]);
 
-
-  // Effect 2: Syncs the DatePicker's visual state with the `selectedDate` from App.js.
-  // This ensures the date picker always shows the correct date from the app's state.
   useEffect(() => {
     if (!selectedDate) {
-      // If date is null (e.g., still loading), clear the picker.
       setFocusedDate(null);
       setDropdownValue('');
       return;
     }
 
     if (selectedDate.includes(' to ')) {
-      // Date is a range, no single date is focused in the picker
       setFocusedDate(null);
     } else {
-      // Date is a single day. Parse it and set it in the date picker.
       const [day, month, year] = selectedDate.split('/').map(Number);
       const dateObj = new Date(year, month - 1, day);
       if (!isNaN(dateObj.getTime())) {
           setFocusedDate(dateObj);
       }
       
-      // Update dropdown for 'Today'
       if (selectedDate === formatDate(new Date())) {
           setDropdownValue('Today');
       } else {
           setDropdownValue('');
       }
     }
-  }, [selectedDate]); // This effect runs whenever the main app date changes.
+  }, [selectedDate]);
 
 
   const handleDateChange = (date) => {
@@ -135,10 +119,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
     setShowCustomPicker(false);
   };
   
-  // No changes needed for the JSX below, it will now work correctly
-  // with the fixed state management logic above.
   const navLink = (path, label) => (
-    // ...
     <Link
       to={path}
       className={`hover:underline ${location.pathname === path ? 'font-bold underline' : ''}`}
@@ -149,7 +130,6 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   );
 
   const Dropdown = () => (
-    // ...
     <select
       value={dropdownValue}
       onChange={handleRangeChange}
@@ -167,7 +147,6 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   );
 
   const renderDatePicker = () => {
-    // This function will now correctly display the `focusedDate` which is synced from the App's state.
     return (
       <DatePicker
         selected={focusedDate}
@@ -184,8 +163,6 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
     );
   };
   
-  // (The rest of the component's JSX remains the same)
-  // ...
   return (
     <header className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 shadow-md fixed w-full z-10 top-0 left-0">
       <div className="flex justify-between items-start md:items-center">
@@ -199,6 +176,8 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
+            {/* *** STEP 1: ADD THE NEW LINK HERE (DESKTOP VIEW) *** */}
+            {navLink('/segregation-belts', 'Segregation Belts')}
             {navLink('/current-stock', 'Current Stock')}
             {navLink('/financials', 'Financials')}
           </nav>
@@ -234,6 +213,8 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
+            {/* *** STEP 2: ADD THE NEW LINK HERE (MOBILE VIEW) *** */}
+            {navLink('/segregation-belts', 'Segregation Belts')}
             {navLink('/current-stock', 'Current Stock')}
             {navLink('/financials', 'Financials')}
           </div>
