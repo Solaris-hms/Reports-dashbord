@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-const Navbar = ({ setSelectedDate }) => {
+const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownValue, setDropdownValue] = useState('');
   const [prevDropdownValue, setPrevDropdownValue] = useState('');
@@ -15,29 +15,60 @@ const Navbar = ({ setSelectedDate }) => {
   const [focusedDate, setFocusedDate] = useState(null);
   const location = useLocation();
 
-  const isCurrentStock = location.pathname === '/current-stock';
+  const isCurrentStockPage = location.pathname === '/current-stock';
 
   const formatDate = (date) => {
+    if (!date) return '';
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
+  
+  useEffect(() => {
+    if (isCurrentStockPage) {
+      if (latestStockDate) {
+        if (selectedDate !== latestStockDate) {
+          setSelectedDate(latestStockDate);
+        }
+      } else if (selectedDate && selectedDate.includes(' to ')) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        setSelectedDate(formatDate(yesterday));
+      }
+    }
+  }, [isCurrentStockPage, latestStockDate, selectedDate, setSelectedDate]);
 
   useEffect(() => {
-    if (isCurrentStock) {
-      const today = new Date();
-      setFocusedDate(today);
-      setSelectedDate(formatDate(today));
+    if (!selectedDate) {
+      setFocusedDate(null);
       setDropdownValue('');
+      return;
     }
-  }, [isCurrentStock]);
+
+    if (selectedDate.includes(' to ')) {
+      setFocusedDate(null);
+    } else {
+      const [day, month, year] = selectedDate.split('/').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      if (!isNaN(dateObj.getTime())) {
+          setFocusedDate(dateObj);
+      }
+      
+      if (selectedDate === formatDate(new Date())) {
+          setDropdownValue('Today');
+      } else {
+          setDropdownValue('');
+      }
+    }
+  }, [selectedDate]);
+
 
   const handleDateChange = (date) => {
     if (!date || isNaN(date)) return;
     setFocusedDate(date);
     setSelectedDate(formatDate(date));
-    setDropdownValue(''); // Reset dropdown to "Range"
+    setDropdownValue('');
   };
 
   const handleRangeChange = (e) => {
@@ -87,11 +118,12 @@ const Navbar = ({ setSelectedDate }) => {
     setSelectedDate(`${formatDate(startDate)} to ${formatDate(today)}`);
     setShowCustomPicker(false);
   };
-
+  
   const navLink = (path, label) => (
     <Link
       to={path}
       className={`hover:underline ${location.pathname === path ? 'font-bold underline' : ''}`}
+      onClick={() => setMenuOpen(false)}
     >
       {label}
     </Link>
@@ -115,36 +147,22 @@ const Navbar = ({ setSelectedDate }) => {
   );
 
   const renderDatePicker = () => {
-    const isToday = dropdownValue === 'Today';
-    const selected =
-      isToday || !focusedDate
-        ? isToday
-          ? new Date()
-          : null
-        : focusedDate instanceof Date && !isNaN(focusedDate)
-        ? focusedDate
-        : null;
-
-    const placeholderText = isToday ? formatDate(new Date()) : 'Pick a particular date';
-
     return (
       <DatePicker
-        selected={selected}
+        selected={focusedDate}
         onChange={handleDateChange}
-        placeholderText={placeholderText}
+        placeholderText="Select Date"
         dateFormat="dd/MM/yyyy"
         className="bg-transparent text-white text-sm outline-none cursor-pointer w-[150px]"
         popperPlacement="bottom-end"
         calendarClassName="bg-white rounded-xl p-2 shadow-xl border border-gray-200"
-        dayClassName={() =>
-          'text-gray-700 hover:bg-blue-100 transition duration-150 rounded-full'
-        }
+        dayClassName={() => 'text-gray-700 hover:bg-blue-100 transition duration-150 rounded-full'}
         minDate={new Date('2025-01-01')}
         maxDate={new Date('2075-05-02')}
       />
     );
   };
-
+  
   return (
     <header className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 shadow-md fixed w-full z-10 top-0 left-0">
       <div className="flex justify-between items-start md:items-center">
@@ -158,7 +176,10 @@ const Navbar = ({ setSelectedDate }) => {
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
+            {/* *** STEP 1: ADD THE NEW LINK HERE (DESKTOP VIEW) *** */}
+            {navLink('/segregation-belts', 'Segregation Belts')}
             {navLink('/current-stock', 'Current Stock')}
+            {navLink('/financials', 'Financials')}
           </nav>
 
           <div className="hidden md:flex items-center space-x-2">
@@ -166,7 +187,7 @@ const Navbar = ({ setSelectedDate }) => {
               <CalendarDays size={18} className="text-white" />
               {renderDatePicker()}
             </div>
-            {!isCurrentStock && <Dropdown />}
+            {!isCurrentStockPage && <Dropdown />}
           </div>
 
           <button
@@ -186,14 +207,16 @@ const Navbar = ({ setSelectedDate }) => {
             <CalendarDays size={18} className="text-white" />
             {renderDatePicker()}
           </div>
-
-          {!isCurrentStock && <Dropdown />}
+          {!isCurrentStockPage && <Dropdown />}
 
           <div className="flex flex-col space-y-2">
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
+            {/* *** STEP 2: ADD THE NEW LINK HERE (MOBILE VIEW) *** */}
+            {navLink('/segregation-belts', 'Segregation Belts')}
             {navLink('/current-stock', 'Current Stock')}
+            {navLink('/financials', 'Financials')}
           </div>
         </div>
       )}
@@ -255,11 +278,7 @@ const Navbar = ({ setSelectedDate }) => {
                   }
                 }}
                 disabled={!customStartDate || !customEndDate}
-                className={`px-4 py-2 rounded text-sm ${
-                  customStartDate && customEndDate
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-blue-200 text-white cursor-not-allowed'
-                }`}
+                className={`px-4 py-2 rounded text-sm ${customStartDate && customEndDate ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-200 text-white cursor-not-allowed'}`}
               >
                 Apply
               </button>
@@ -267,23 +286,8 @@ const Navbar = ({ setSelectedDate }) => {
           </div>
         </div>
       )}
-
       <style>
-        {`
-          @keyframes fadeInScale {
-            0% {
-              opacity: 0;
-              transform: scale(0.95);
-            }
-            100% {
-              opacity: 1;
-              transform: scale(1);
-            }
-          }
-          .animate-fadeInScale {
-            animation: fadeInScale 0.3s ease-out;
-          }
-        `}
+        {`@keyframes fadeInScale {0% {opacity: 0;transform: scale(0.95);} 100% {opacity: 1;transform: scale(1);}}.animate-fadeInScale {animation: fadeInScale 0.3s ease-out;}`}
       </style>
     </header>
   );
