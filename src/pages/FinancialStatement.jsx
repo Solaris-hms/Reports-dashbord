@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 
 // === CONFIGURATION: Define salaries, rates, and FIXED employee counts here ===
 // Worker data comes from the API. Other roles have a fixed daily count.
-const ELECTRICITY_RATE_PER_UNIT = 7.68; // New rate definition
+const ELECTRICITY_RATE_PER_UNIT = 7.68;
+const ROYALTY_NAGAR_NIGAM_PER_DAY = 5500; // New constant daily expense
 
 const SALARY_CONFIG = {
     // Dynamic Role
@@ -87,8 +88,10 @@ const FinancialStatement = ({ revenueData, workforceData, selectedDate, dateRang
 
         // 3. Perform calculations with the gathered data
         const calculatedElectricityCost = operationalTotals.totalElectricityUnits * ELECTRICITY_RATE_PER_UNIT;
-        // NOTE: For now, Diesel Cost is still assumed from revenueData. If it's in workforceData, update it similarly.
         const dieselCostFromRevenue = filteredRevenue.reduce((sum, item) => sum + (Number(item['Diesel Cost']) || 0), 0);
+        
+        // NEW: Calculate the fixed royalty cost based on the number of days
+        const totalRoyaltyCost = ROYALTY_NAGAR_NIGAM_PER_DAY * numberOfDays;
 
         // MODIFICATION END
 
@@ -108,14 +111,17 @@ const FinancialStatement = ({ revenueData, workforceData, selectedDate, dateRang
         });
 
         const totalIncome = totals.rdfRevenue + totals.afrRevenue + totals.recyclablesRevenue;
-        const totalOperatingExpenses = totals.transportationExpenses + dieselCostFromRevenue + calculatedElectricityCost + totals.maintenanceCost;
+        // UPDATED: Added totalRoyaltyCost to totalOperatingExpenses
+        const totalOperatingExpenses = totals.transportationExpenses + dieselCostFromRevenue + calculatedElectricityCost + totals.maintenanceCost + totalRoyaltyCost;
         const totalExpenses = totalOperatingExpenses + totalEmployeeSalary + totals.otherExpenses;
         const netResult = totalIncome - totalExpenses;
         
+        // UPDATED: Added Royalty to the operating expenses breakdown
         const operatingExpensesData = {
             "Transportation Expenses": totals.transportationExpenses,
-            "Diesel Cost": dieselCostFromRevenue, // Using this for consistency for now
-            "Electricity Cost": calculatedElectricityCost, // <-- Using the newly calculated cost
+            "Diesel Cost": dieselCostFromRevenue, 
+            "Electricity Cost": calculatedElectricityCost,
+            "Royalty (Nagar Nigam)": totalRoyaltyCost, // <-- ADDED HERE
             "Maintenance Cost": totals.maintenanceCost
         };
 

@@ -8,13 +8,6 @@ import PriorityTasksCard from './PriorityTask';
 
 // --- DATE HELPER FUNCTIONS (required for filtering by ID) ---
 
-// Converts a DD/MM/YYYY string into a Date object
-const parseDDMMYYYY = (dateStr) => {
-  const [day, month, year] = dateStr.split('/').map(Number);
-  // JavaScript months are 0-indexed, so we subtract 1
-  return new Date(year, month - 1, day);
-}
-
 // Converts a MMDDYYYY id string into a Date object
 const parseIdToDate = (idStr) => {
     if (typeof idStr !== 'string' || idStr.length !== 8) return null;
@@ -25,14 +18,6 @@ const parseIdToDate = (idStr) => {
     // JavaScript months are 0-indexed
     return new Date(year, month - 1, day);
 };
-
-// Formats a Date object to a DD/MM/YYYY string for displaying concatenated info
-const formatDateToDisplay = (date) => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}`; // Short format for remarks
-};
-
 
 const Dashboard = ({ plantData, selectedDate, dateRange }) => {
   
@@ -95,29 +80,39 @@ const Dashboard = ({ plantData, selectedDate, dateRange }) => {
               acc.sortingAccuracyCount = (acc.sortingAccuracyCount || 0) + 1;
           }
 
-          // Concatenate all text fields
+          // ** [THE FIX] **
+          // Aggregate text fields into arrays of objects for organized display
           const textFields = ['Any Machine Issues Today?', 'Any Safety Incident Today?', 'Any VIP Visit Today?', 'Equipment Maintenance Performed Today?', 'Priority Tasks for Tomorrow'];
           textFields.forEach(field => {
-              if (item[field] && item[field].trim() && item[field].toLowerCase() !== 'no' && item[field].toLowerCase() !== 'na') {
+              const textValue = item[field] ? item[field].trim() : '';
+              if (textValue && textValue.toLowerCase() !== 'no' && textValue.toLowerCase() !== 'na' && textValue.toLowerCase() !== 'n/a') {
                   const itemDate = parseIdToDate(item.id);
-                  const datePrefix = itemDate ? formatDateToDisplay(itemDate) : 'Date';
-                  acc[field] = (acc[field] || '') + `${datePrefix}: ${item[field].trim()} | `;
+                  // Create an object with separate date and text properties
+                  const newEntry = { date: itemDate, text: textValue };
+
+                  // If the accumulator is still a string, initialize it as an array
+                  if (!Array.isArray(acc[field])) {
+                      acc[field] = [newEntry];
+                  } else {
+                      // Otherwise, push the new object
+                      acc[field].push(newEntry);
+                  }
               }
           });
           return acc;
-      }, { ...defaultEmptyData, sortingAccuracySum: 0, sortingAccuracyCount: 0 }); // Initialize accumulator with defaults
+      }, { ...defaultEmptyData, sortingAccuracySum: 0, sortingAccuracyCount: 0 }); 
       
       // Calculate the final average for Sorting Accuracy
       filteredData['Sorting Accuracy Today (In Percent )'] = 
           filteredData.sortingAccuracyCount > 0 
-          ? filteredData.sortingAccuracySum / filteredData.sortingAccuracyCount 
+          ? (filteredData.sortingAccuracySum / filteredData.sortingAccuracyCount).toFixed(2)
           : 0;
       
-      // Clean up helper properties
       delete filteredData.sortingAccuracySum;
       delete filteredData.sortingAccuracyCount;
+
     } else {
-      filteredData = { ...defaultEmptyData }; // If no data found in range, show empty state
+      filteredData = { ...defaultEmptyData }; // If no data found, show empty state
     }
   }
 

@@ -165,23 +165,29 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
   
   return (
     <header className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 shadow-md fixed w-full z-10 top-0 left-0">
-      <div className="flex justify-between items-start md:items-center">
+      <div className="flex justify-between items-center">
+
+        {/* Part 1: Left (Logo and Brand) */}
         <div className="flex items-center space-x-3">
           <img src={logo} alt="Solaris Logo" className="h-10 w-10 rounded" />
           <span className="text-xl font-bold">Solaris</span>
         </div>
+        
+        {/* Part 2: Center (Navigation Links for Desktop) */}
+        <nav className="hidden md:flex space-x-6 text-sm md:text-base">
+          {navLink('/revenue', 'Revenue')}
+          {navLink('/workforce', 'Workforce')}
+          {navLink('/waste-processing', 'Waste Processing')}
+          {navLink('/segregation-belts', 'Segregation Belts')}
+          {navLink('/current-stock', 'Current Stock')}
+          {/* *** NEW LINK ADDED HERE *** */}
+          {navLink('/sales-record', 'Sales Record')}
+          {navLink('/financials', 'Financials')}
+        </nav>
 
-        <div className="flex items-center space-x-4">
-          <nav className="hidden md:flex space-x-6 text-sm md:text-base">
-            {navLink('/revenue', 'Revenue')}
-            {navLink('/workforce', 'Workforce')}
-            {navLink('/waste-processing', 'Waste Processing')}
-            {/* *** STEP 1: ADD THE NEW LINK HERE (DESKTOP VIEW) *** */}
-            {navLink('/segregation-belts', 'Segregation Belts')}
-            {navLink('/current-stock', 'Current Stock')}
-            {navLink('/financials', 'Financials')}
-          </nav>
-
+        {/* Part 3: Right (Date Pickers and Mobile Menu Toggle) */}
+        <div className="flex items-center space-x-2">
+          {/* Desktop Date Pickers */}
           <div className="hidden md:flex items-center space-x-2">
             <div className="flex items-center bg-white/20 px-3 py-1 rounded-md shadow-md space-x-2 hover:bg-white/30 transition duration-300 backdrop-blur-md border border-white/30">
               <CalendarDays size={18} className="text-white" />
@@ -189,7 +195,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
             </div>
             {!isCurrentStockPage && <Dropdown />}
           </div>
-
+          {/* Mobile Menu Button */}
           <button
             className="md:hidden"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -213,9 +219,10 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
             {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
-            {/* *** STEP 2: ADD THE NEW LINK HERE (MOBILE VIEW) *** */}
             {navLink('/segregation-belts', 'Segregation Belts')}
             {navLink('/current-stock', 'Current Stock')}
+            {/* *** NEW LINK ADDED HERE (for mobile) *** */}
+            {navLink('/sales-record', 'Sales Record')}
             {navLink('/financials', 'Financials')}
           </div>
         </div>
