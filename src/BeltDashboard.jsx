@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Chart from 'chart.js/auto';
+import { Download } from 'lucide-react'; // <-- Import icon
+import * as XLSX from 'xlsx'; // <-- Import xlsx library
 
 // Converts "DD/MM/YYYY" to "YYYY-MM-DD" for filtering
 const convertAppDateToFilterDate = (dateStr) => {
@@ -27,6 +29,43 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
         );
     }, [allRecords, selectedDate, operator]);
 
+    // --- NEW: Excel Export Functionality ---
+    const handleExport = () => {
+        const totalWeight = filteredData.reduce((sum, r) => sum + r.quantity_tons, 0).toFixed(3);
+        const totalEntries = filteredData.length;
+        const topMaterial = Object.entries(filteredData.reduce((acc, r) => {
+            acc[r.material] = (acc[r.material] || 0) + r.quantity_tons;
+            return acc;
+        }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+        // Sheet 1: Summary
+        const summaryData = [
+            { Metric: "Selected Date", Value: selectedDate },
+            { Metric: "Selected Operator", Value: operator },
+            { Metric: "Total Weight (Tons)", Value: totalWeight },
+            { Metric: "Total Entries", Value: totalEntries },
+            { Metric: "Top Material", Value: topMaterial }
+        ];
+        const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+
+        // Sheet 2: Detailed Log
+        const logData = filteredData
+            .sort((a,b) => b.quantity_tons - a.quantity_tons)
+            .map(r => ({
+                "Belt": r.belt,
+                "Operator": r.safai_saathi || 'N/A',
+                "Material": r.material || 'N/A',
+                "Quantity (Tons)": r.quantity_tons.toFixed(4),
+                "Timestamp": r.timestamp
+            }));
+        const logSheet = XLSX.utils.json_to_sheet(logData);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+        XLSX.utils.book_append_sheet(wb, logSheet, "Detailed Log");
+        XLSX.writeFile(wb, `Belt_Performance_Report_${selectedDate.replace(/\//g, '-')}.xlsx`);
+    };
+
     useEffect(() => {
         const materialTotals = filteredData.reduce((acc, r) => {
             acc[r.material] = (acc[r.material] || 0) + r.quantity_tons;
@@ -36,10 +75,8 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
         const labels = sorted.map(item => item[0]);
         const quantities = sorted.map(item => item[1]);
         
-        // <<< STEP 1: RESTORING the vibrant color palette you liked >>>
         const VIBRANT_CHART_COLORS = ['#3b82f6', '#14b8a6', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
         
-        // --- Destroy and Recreate Charts ---
         if (barChartRef.current) barChartRef.current.destroy();
         if (pieChartRef.current) pieChartRef.current.destroy();
 
@@ -62,7 +99,6 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
                         data: quantities,
                         backgroundColor: VIBRANT_CHART_COLORS,
                         borderColor: 'var(--bg-card, #ffffff)',
-                        // <<< STEP 2: FIXING the "thick border" by reducing it to a subtle 2px >>>
                         borderWidth: 2 
                     }]
                 },
@@ -70,7 +106,6 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
             });
         }
 
-        // --- Update Summary Cards ---
         const topMat = sorted[0];
         document.getElementById('total-weight').textContent = filteredData.reduce((sum, r) => sum + r.quantity_tons, 0).toFixed(3);
         document.getElementById('total-entries').textContent = filteredData.length;
@@ -102,7 +137,8 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
             <style>{`
                 :root { --font-main: 'Poppins', sans-serif; --bg-body: #f8f9fa; --bg-card: #ffffff; --border-color: #e5e7eb; --text-primary: #111827; --text-secondary: #6b7280; --accent-color: #3b82f6; --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05); }
                 .belt-dashboard-container { max-width: 1400px; margin: 0 auto; padding: 2rem; background-color: var(--bg-body); color: var(--text-primary); }
-                .belt-dashboard-header { text-align: center; margin-bottom: 2.5rem; }
+                .belt-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
+                .belt-dashboard-header-text { text-align: left; }
                 .belt-dashboard-header h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; }
                 .belt-dashboard-header p { color: var(--text-secondary); font-size: 1rem; }
                 
@@ -126,13 +162,21 @@ const BeltDashboard = ({ beltData, selectedDate }) => {
                 #data-table th, #data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
                 #data-table th { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
                 #data-table tbody tr:hover { background-color: #f9fafb; }
+                .export-button { padding: 0.5rem 1rem; background-color: var(--accent-color); color: white; border: none; border-radius: 0.375rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: background-color 0.2s; }
+                .export-button:hover { background-color: #2563eb; }
                 @media (min-width: 1024px) { .two-column-grid { grid-template-columns: 2fr 1fr; } }
             `}</style>
             
             <div className="belt-dashboard-container">
                 <header className="belt-dashboard-header">
-                    <h1>Segregation Belts Overview</h1>
-                    <p>Daily performance metrics for waste segregation belts.</p>
+                    <div className="belt-dashboard-header-text">
+                        <h1>Segregation Belts Overview</h1>
+                        <p>Daily performance metrics for waste segregation belts.</p>
+                    </div>
+                    <button onClick={handleExport} className="export-button">
+                        <Download size={18} />
+                        Export to Excel
+                    </button>
                 </header>
 
                 <main className="content-grid">

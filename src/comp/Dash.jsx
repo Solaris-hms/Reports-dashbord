@@ -5,6 +5,8 @@ import OperationalMetrics from './OperationaMetric';
 import MaterialRecovery from './MaterialRecovery';
 import IncidentMaintenanceCard from './incidents';
 import PriorityTasksCard from './PriorityTask';
+import { Download } from 'lucide-react'; // <-- Import icon
+import * as XLSX from 'xlsx'; // <-- Import xlsx library
 
 // --- DATE HELPER FUNCTIONS (required for filtering by ID) ---
 
@@ -116,17 +118,117 @@ const Dashboard = ({ plantData, selectedDate, dateRange }) => {
     }
   }
 
+  // --- NEW: Excel Export Functionality ---
+  const handleExport = () => {
+    if (!filteredData) {
+      alert("No data available to export.");
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+
+    // Helper to format text entries for Excel
+    const formatTextEntries = (data) => {
+        if (Array.isArray(data)) {
+            return data.map(entry => `${entry.date.toLocaleDateString()}: ${entry.text}`).join('\n');
+        }
+        return data;
+    };
+
+    // Sheet 1: Summary
+    const summaryData = [
+        { "Report Period": selectedDate },
+        { "Total Waste Received (Tons)": filteredData['Waste Received (in tons)'].toFixed(2) },
+        { "Total Waste Processed (Tons)": filteredData['Waste Processed (in tons)'].toFixed(2) },
+        { "Average Sorting Accuracy (%)": Number(filteredData['Sorting Accuracy Today (In Percent )']).toFixed(2) },
+    ];
+    const ws_summary = XLSX.utils.json_to_sheet(summaryData, { skipHeader: true });
+    XLSX.utils.book_append_sheet(wb, ws_summary, "Summary");
+
+    // Sheet 2: Waste Overview
+    const wasteOverviewData = [
+        { Metric: "Waste Received (Tons)", Value: filteredData['Waste Received (in tons)'].toFixed(2) },
+        { Metric: "Waste Processed (Tons)", Value: filteredData['Waste Processed (in tons)'].toFixed(2) },
+        { Metric: "Waste Reject (Tons)", Value: filteredData['Waste Reject (in tons )'].toFixed(2) },
+        { Metric: "Waste Unprocessed (Tons)", Value: filteredData['Waste Unprocessed (in tons)'].toFixed(2) },
+    ];
+    const ws_overview = XLSX.utils.json_to_sheet(wasteOverviewData);
+    XLSX.utils.book_append_sheet(wb, ws_overview, "Waste Overview");
+
+    // Sheet 3: Processing Breakdown
+    const processingBreakdownData = [
+        { Metric: "RDF Processed (Tons)", Value: filteredData['RDF Processed (in tons)'].toFixed(2) },
+        { Metric: "AFR Processed (Tons)", Value: filteredData['AFR Processed (in tons)'].toFixed(2) },
+        { Metric: "Inert Processed (Tons)", Value: filteredData['Inert Processed (in tons)'].toFixed(2) },
+    ];
+    const ws_processing = XLSX.utils.json_to_sheet(processingBreakdownData);
+    XLSX.utils.book_append_sheet(wb, ws_processing, "Processing Breakdown");
+
+    // Sheet 4: Operational Metrics
+    const operationalMetricsData = [
+        { Metric: "Ragpickers Present", Value: filteredData['Ragpicker Count Present Today'] },
+        { Metric: "Machine Downtime (Hours)", Value: filteredData['Machine Down Time Today (In Hours)'].toFixed(2) },
+        { Metric: "Machine Uptime (Hours)", Value: filteredData['Machine Up Time Today (In Hours)'].toFixed(2) },
+        { Metric: "Sorting Accuracy (%)", Value: Number(filteredData['Sorting Accuracy Today (In Percent )']).toFixed(2) },
+    ];
+    const ws_ops = XLSX.utils.json_to_sheet(operationalMetricsData);
+    XLSX.utils.book_append_sheet(wb, ws_ops, "Operational Metrics");
+
+    // Sheet 5: Material Recovery
+    const materialRecoveryData = [
+        { Material: 'Bhangar', Tons: filteredData['Bhangar (in tons)'].toFixed(3) },
+        { Material: 'Black Plastic', Tons: filteredData['Black Plastic (in tons)'].toFixed(3) },
+        { Material: 'Carton', Tons: filteredData['Carton (in tons)'].toFixed(3) },
+        { Material: 'Duplex', Tons: filteredData['Duplex (in tons)'].toFixed(3) },
+        { Material: 'Glass', Tons: filteredData['Glass (in tons)'].toFixed(3) },
+        { Material: 'Grey Board', Tons: filteredData['Grey Board (in tons)'].toFixed(3) },
+        { Material: 'HD Cloth', Tons: filteredData['HD Cloth (in tons)'].toFixed(3) },
+        { Material: 'LD', Tons: filteredData['LD  (in tons)'].toFixed(3) },
+        { Material: 'HM', Tons: filteredData['HM (in tons)'].toFixed(3) },
+        { Material: 'Record', Tons: filteredData['Record (in tons)'].toFixed(3) },
+        { Material: 'Sole', Tons: filteredData['Sole (in tons)'].toFixed(3) },
+        { Material: 'Plastic', Tons: filteredData['Plastic (in tons)'].toFixed(3) },
+        { Material: 'Aluminium', Tons: filteredData['Aluminium (in tons)'].toFixed(3) },
+        { Material: 'Aluminium Can', Tons: filteredData['Aluminium can (in tons)'].toFixed(3) },
+        { Material: 'PET Bottle', Tons: filteredData['Pet Bottle  (in tons)'].toFixed(3) },
+        { Material: 'Milk Pouch', Tons: filteredData['Milk Pouch  (in tons)'].toFixed(3) },
+    ];
+    const ws_recovery = XLSX.utils.json_to_sheet(materialRecoveryData);
+    XLSX.utils.book_append_sheet(wb, ws_recovery, "Material Recovery");
+
+    // Sheet 6: Incidents & Tasks
+    const incidentsTasksData = [
+        { Category: "Machine Issues", Details: formatTextEntries(filteredData['Any Machine Issues Today?']) },
+        { Category: "Safety Incidents", Details: formatTextEntries(filteredData['Any Safety Incident Today?']) },
+        { Category: "VIP Visits", Details: formatTextEntries(filteredData['Any VIP Visit Today?']) },
+        { Category: "Maintenance Performed", Details: formatTextEntries(filteredData['Equipment Maintenance Performed Today?']) },
+        { Category: "Priority Tasks for Tomorrow", Details: formatTextEntries(filteredData['Priority Tasks for Tomorrow']) },
+    ];
+    const ws_incidents = XLSX.utils.json_to_sheet(incidentsTasksData);
+    XLSX.utils.book_append_sheet(wb, ws_incidents, "Incidents & Tasks");
+
+    XLSX.writeFile(wb, `Waste_Processing_Report_${selectedDate.replace(/\//g, '-')}.xlsx`);
+  };
+
   const displayDate = selectedDate || 'N/A';
 
   return (
     <div className="p-6 min-h-screen bg-gradient-to-br from-[#9b27b0] via-[#2196f3] to-[#f2c99c]">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
-        <h2 className="text-3xl font-bold text-white drop-shadow-md">
-          {isSingleDate ? 'Daily Waste Processing Summary' : 'Waste Processing Summary for Range'}
-        </h2>
-        <span className="text-sm text-white mt-2 md:mt-0">
-          {isSingleDate ? 'Report Date' : 'Date Range'}: {displayDate}
-        </span>
+        <div>
+          <h2 className="text-3xl font-bold text-white drop-shadow-md">
+            {isSingleDate ? 'Daily Waste Processing Summary' : 'Waste Processing Summary for Range'}
+          </h2>
+          <span className="text-sm text-white mt-2 md:mt-0 block">
+            {isSingleDate ? 'Report Date' : 'Date Range'}: {displayDate}
+          </span>
+        </div>
+        <button 
+            onClick={handleExport}
+            className="mt-4 md:mt-0 px-4 py-2 bg-white/20 text-white rounded-lg shadow-md hover:bg-white/30 backdrop-blur-md transition duration-300 flex items-center gap-2"
+        >
+            <Download size={18} />
+            Export to Excel
+        </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 mb-6">

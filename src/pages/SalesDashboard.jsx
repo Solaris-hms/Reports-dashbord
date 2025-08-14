@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { IndianRupee, Scale, Users, TrendingUp, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { IndianRupee, Scale, Users, TrendingUp, Search, ChevronLeft, ChevronRight, Download } from 'lucide-react'; // Added Download icon
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, LabelList, CartesianGrid } from 'recharts';
 import { Chart as ChartJS, ArcElement, Tooltip as ChartJsTooltip, Legend as ChartJsLegend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
+import * as XLSX from 'xlsx'; // <-- Import xlsx library
 
 // Using your original, correct import path
 import { Card, CardHeader, CardTitle, CardContent } from '@/comp/dashboard-ui';
@@ -534,13 +535,72 @@ const SalesDashboard = ({ salesData, dateRange }) => {
             transactions
         };
     }, [salesData, dateRange]);
+
+    // --- NEW: Excel Export Functionality ---
+    const handleExport = () => {
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: KPIs
+        const kpiData = [
+            { Metric: "Total Sales", Value: formatCurrency(memoizedData.kpis.totalSales) },
+            { Metric: "Total Weight (kg)", Value: (memoizedData.kpis.totalWeight || 0).toLocaleString('en-IN') },
+            { Metric: "Active Parties", Value: memoizedData.kpis.activeParties || 0 },
+            { Metric: "Average Transaction Value", Value: formatCurrency(memoizedData.kpis.avgTransaction) }
+        ];
+        const kpiSheet = XLSX.utils.json_to_sheet(kpiData);
+        XLSX.utils.book_append_sheet(wb, kpiSheet, "Key Metrics");
+
+        // Sheet 2: Top Parties
+        const topPartiesData = memoizedData.topPartiesList.map(p => ({
+            "Party Name": p.name,
+            "Total Revenue": p.total,
+            "Number of Transactions": p.count,
+            "Average Sale Value": p.avg
+        }));
+        const topPartiesSheet = XLSX.utils.json_to_sheet(topPartiesData);
+        XLSX.utils.book_append_sheet(wb, topPartiesSheet, "Top Parties");
+        
+        // Sheet 3: Top Materials
+        const topMaterialsData = memoizedData.topMaterialsList.map(m => ({
+            "Material Name": m.name,
+            "Total Revenue": m.total,
+            "Total Weight (kg)": m.weight,
+            "Number of Orders": m.count,
+            "Average Rate (per kg)": m.avgRate
+        }));
+        const topMaterialsSheet = XLSX.utils.json_to_sheet(topMaterialsData);
+        XLSX.utils.book_append_sheet(wb, topMaterialsSheet, "Top Materials");
+
+        // Sheet 4: All Transactions
+        const transactionsData = memoizedData.transactions.map(t => ({
+            "Date": formatToDDMMYYYY(t.date),
+            "Party Name": t.partyName,
+            "Vehicle No": t.vehicleNo,
+            "Material": t.material,
+            "Net Weight (kg)": t.netWeightKg,
+            "Rate": t.rate,
+            "Amount": t.amount,
+            "Payment Mode": t.paymentMode
+        }));
+        const transactionsSheet = XLSX.utils.json_to_sheet(transactionsData);
+        XLSX.utils.book_append_sheet(wb, transactionsSheet, "All Transactions");
+
+        // Generate and download the file
+        XLSX.writeFile(wb, `Sales_Analytics_Report_${formatToDDMMYYYY(new Date())}.xlsx`);
+    };
     
     return (
         <div className="p-4 sm:p-6 bg-gradient-to-br from-[#9b27b0] via-[#2196f3] to-[#f2c99c] min-h-screen font-sans">
             <main className="max-w-7xl mx-auto space-y-8">
-                <header>
-                    <h1 className="text-3xl font-bold text-white">Sales Analytics Dashboard</h1>
-                    <p className="text-base text-gray-200 mt-1">Comprehensive overview of your business performance.</p>
+                <header className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Sales Analytics Dashboard</h1>
+                        <p className="text-base text-gray-200 mt-1">Comprehensive overview of your business performance.</p>
+                    </div>
+                    <Button onClick={handleExport} variant="outline" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-md">
+                        <Download size={18} className="mr-2" />
+                        Export to Excel
+                    </Button>
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

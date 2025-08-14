@@ -24,7 +24,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
-  
+
   useEffect(() => {
     if (isCurrentStockPage) {
       if (latestStockDate) {
@@ -54,7 +54,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
       if (!isNaN(dateObj.getTime())) {
           setFocusedDate(dateObj);
       }
-      
+
       if (selectedDate === formatDate(new Date())) {
           setDropdownValue('Today');
       } else {
@@ -118,7 +118,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
     setSelectedDate(`${formatDate(startDate)} to ${formatDate(today)}`);
     setShowCustomPicker(false);
   };
-  
+
   const navLink = (path, label) => (
     <Link
       to={path}
@@ -162,7 +162,7 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
       />
     );
   };
-  
+
   return (
     <header className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-4 shadow-md fixed w-full z-10 top-0 left-0">
       <div className="flex justify-between items-center">
@@ -172,10 +172,9 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
           <img src={logo} alt="Solaris Logo" className="h-10 w-10 rounded" />
           <span className="text-xl font-bold">Solaris</span>
         </div>
-        
+
         {/* Part 2: Center (Navigation Links for Desktop) */}
         <nav className="hidden md:flex space-x-6 text-sm md:text-base">
-          {navLink('/revenue', 'Revenue')}
           {navLink('/workforce', 'Workforce')}
           {navLink('/waste-processing', 'Waste Processing')}
           {navLink('/segregation-belts', 'Segregation Belts')}
@@ -183,6 +182,8 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
           {/* *** NEW LINK ADDED HERE *** */}
           {navLink('/sales-record', 'Sales Record')}
           {navLink('/financials', 'Financials')}
+          {/* ** NEW SPLITWISE LINK ** */}
+          {navLink('/splitwise-expenses', 'Splitwise Expenses')}
         </nav>
 
         {/* Part 3: Right (Date Pickers and Mobile Menu Toggle) */}
@@ -216,7 +217,6 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
           {!isCurrentStockPage && <Dropdown />}
 
           <div className="flex flex-col space-y-2">
-            {navLink('/revenue', 'Revenue')}
             {navLink('/workforce', 'Workforce')}
             {navLink('/waste-processing', 'Waste Processing')}
             {navLink('/segregation-belts', 'Segregation Belts')}
@@ -224,6 +224,8 @@ const Navbar = ({ setSelectedDate, selectedDate, latestStockDate }) => {
             {/* *** NEW LINK ADDED HERE (for mobile) *** */}
             {navLink('/sales-record', 'Sales Record')}
             {navLink('/financials', 'Financials')}
+            {/* ** NEW SPLITWISE LINK (for mobile) ** */}
+            {navLink('/splitwise-expenses', 'Splitwise Expenses')}
           </div>
         </div>
       )}

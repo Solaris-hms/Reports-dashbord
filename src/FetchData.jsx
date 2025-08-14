@@ -1,4 +1,3 @@
-
 // --- API Data Fetching Functions ---
 
 const API_KEY_CURRENTSTOCK = "https://script.googleusercontent.com/a/macros/solarisrecycling.com/echo?user_content_key=AehSKLgo6GQyGwRjo7sR-AxzvL2wngVhVAd7muatl5ifrAH6323pg9dM4p5rLQbfCiRVNcXTLs-TyVN0jrUOzGc6FBrgFvFU-fXqljv6QcPX353a018fuPRwfiGZQaltx-HPRuUdgEg-7W4h1ZJ-2KbNDE2Wo-4jV1rGqYQQVquImDZ3J70P9BBF_ol0L9i_CAgl9J579XihesjJp4MQTuzlTExHXhuLNi6E62yTdGIW9G1KkNpZbNjU9VZ1YMOuYihY9pJLVz6ltMuUHQugI4aTQaqW7IWrsphSv-V57Xzd9KyyeeLL02KRMj_Ikap-O3XHfb2EriFq&lib=M3ZOT5y13ixuUdBXybYdVGw-EZNJJRj1N";
@@ -52,7 +51,7 @@ export const revdata = async () => {
 const API_KEY_BELT = 'https://script.google.com/macros/s/AKfycbyO-x3pEihYFlEsAWPJQLj1GJ1ptyvxUYQWrnuw_ZWYM_5kNQyZro2D5RGq9BYfDnDp/exec';
 export const beltapidata = async () => {
   try {
-    const promises = ['1', '2', '3'].map(beltId => 
+    const promises = ['1', '2', '3'].map(beltId =>
       fetch(`${API_KEY_BELT}?belt=${beltId}`).then(res => res.json())
     );
     const results = await Promise.all(promises);
@@ -81,7 +80,7 @@ export const salesapidata = async () => {
 
     const cleanAndCombine = (dataArray, type) => {
       return dataArray
-        .filter(row => row['S.N']) 
+        .filter(row => row['S.N'])
         .map(row => {
           const cleanRow = {};
           for (const key in row) {
@@ -127,6 +126,7 @@ export const salesapidata = async () => {
               paymentMode: 'bill', // Assume RDF is always billed
               remark: null,
               type: 'RDF/AFR',
+              FrightAmt: Number(cleanRow['Fright Amt']) || 0,
             };
           }
         });
@@ -134,11 +134,29 @@ export const salesapidata = async () => {
 
     const segregated = cleanAndCombine(rawData['SEGRIGATE SALE'] || [], 'segregated');
     const rdfAfr = cleanAndCombine(rawData[' RDF AFR Record all location '] || [], 'rdfAfr');
-    
+
     return [...segregated, ...rdfAfr];
 
   } catch (error) {
     console.error('Failed to fetch or process Sales data:', error);
-    return null; 
+    return null;
   }
+};
+
+// ** UPDATED SPLITWISE API FUNCTION **
+const SPLITWISE_API_URL = "https://script.google.com/macros/s/AKfycbz5kY-P4LjNkjk7-xp8Bf94kNfg8UK4O4GuuM5Y03lNO6MikKPfSKNOLeBd4Ew7X0T7ZA/exec";
+
+export const splitwiseapidata = async () => {
+    try {
+        const response = await fetch(SPLITWISE_API_URL, {
+            method: 'GET',
+        });
+        if (!response.ok) {
+            throw new Error(`Splitwise API HTTP error! Status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to fetch Splitwise data:', error);
+        return null;
+    }
 };

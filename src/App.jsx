@@ -7,9 +7,11 @@ import Revenue from './pages/Revenue';
 import Stock from './CurrentStock/Stockpage';
 import FinancialStatement from './pages/FinancialStatement';
 import BeltDashboard from './BeltDashboard';
-import SalesDashboard from './pages/SalesDashboard'; 
+import SalesDashboard from './pages/SalesDashboard';
+import SplitwiseExpenses from './pages/SplitwiseExpenses'; // <-- Imported the new page
 
-import { stockapidata, workapidata, plantdata, revdata, beltapidata, salesapidata } from './FetchData';
+// Import all data fetching functions, including the new one for Splitwise
+import { stockapidata, workapidata, plantdata, revdata, beltapidata, salesapidata, splitwiseapidata } from './FetchData';
 
 import { Mirage } from 'ldrs/react';
 import 'ldrs/react/Mirage.css';
@@ -29,7 +31,8 @@ function App() {
   const [revenueData, setRevenueData] = useState(null);
   const [beltData, setBeltData] = useState(null);
   const [salesData, setSalesData] = useState(null);
-  
+  const [splitwiseData, setSplitwiseData] = useState(null); 
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [latestStockDate, setLatestStockDate] = useState(null);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
@@ -41,21 +44,28 @@ function App() {
       setLoading(true);
       setError(null);
       try {
-        const [stockResponse, workforceResponse, plantResponse, revenueResponse, beltResponse, salesResponse] = await Promise.all([
-          stockapidata(), workapidata(), plantdata(), revdata(), beltapidata(), salesapidata(),
+        const [stockResponse, workforceResponse, plantResponse, revenueResponse, beltResponse, salesResponse, splitwiseResponse] = await Promise.all([
+          stockapidata(),
+          workapidata(),
+          plantdata(),
+          revdata(),
+          beltapidata(),
+          salesapidata(),
+          splitwiseapidata(),
         ]);
 
-        if (!stockResponse || !workforceResponse || !plantResponse || !revenueResponse || !beltResponse || !salesResponse) {
+        if (!stockResponse || !workforceResponse || !plantResponse || !revenueResponse || !beltResponse || !salesResponse || !splitwiseResponse) {
           throw new Error('One or more API requests failed.');
         }
-        
+
         setStockData(stockResponse);
         setWorkforceData(workforceResponse);
         setPlantData(plantResponse);
         setRevenueData(revenueResponse);
         setBeltData(beltResponse);
         setSalesData(salesResponse);
-        
+        setSplitwiseData(splitwiseResponse); 
+
         // === THE FIX FOR THE DATE PROBLEM ===
         // 1. Find the latest date from the new sales data
         let latestSalesDate = null;
@@ -68,7 +78,7 @@ function App() {
                 latestSalesDate = new Date(Math.max.apply(null, salesDates));
             }
         }
-        
+
         // 2. Find latest stock date (as before)
         let maxStockDate = null;
         if (stockResponse && stockResponse.length > 0) {
@@ -85,7 +95,7 @@ function App() {
             setLatestStockDate(formatDateToDDMMYYYY(maxStockDate));
           }
         }
-        
+
         // 3. Determine the most recent date from all data sources
         let finalLatestDate = latestSalesDate;
         if (maxStockDate && (!finalLatestDate || maxStockDate > finalLatestDate)) {
@@ -152,11 +162,13 @@ function App() {
           <Route path="/revenue" element={<Revenue revenueData={revenueData} selectedDate={selectedDate} dateRange={dateRange} />} />
           <Route path="/workforce" element={<Workforce workforceData={workforceData} selectedDate={selectedDate} dateRange={dateRange} />} />
           <Route path="/current-stock" element={<Stock stockData={stockData} selectedDate={selectedDate} />} />
-          <Route 
-            path="/sales-record" 
-            element={ salesData ? <SalesDashboard salesData={salesData} selectedDate={selectedDate} dateRange={dateRange}/> : <div>Loading Sales Dashboard...</div> } 
+          <Route
+            path="/sales-record"
+            element={ salesData ? <SalesDashboard salesData={salesData} selectedDate={selectedDate} dateRange={dateRange}/> : <div>Loading Sales Dashboard...</div> }
           />
-          <Route path="/financials" element={<FinancialStatement revenueData={revenueData} workforceData={workforceData} selectedDate={selectedDate} dateRange={dateRange} />} />
+          {/* Pass `splitwiseData` to the FinancialStatement component */}
+          <Route path="/financials" element={<FinancialStatement revenueData={revenueData} workforceData={workforceData} salesData={salesData} splitwiseData={splitwiseData} selectedDate={selectedDate} dateRange={dateRange} />} />
+          <Route path="/splitwise-expenses" element={<SplitwiseExpenses splitwiseData={splitwiseData} dateRange={dateRange} />} />
         </Routes>
       </div>
     </Router>
